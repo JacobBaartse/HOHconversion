@@ -13,10 +13,11 @@ if __name__ == "__main__":
     output_dir = r"C:\Users\fam_b\Downloads\HOH_7mei2024\Converted"
 
     for input_filename in glob.glob(input_dir + r"\*"):
-        # input_filename = os.path.join(input_dir, "Rohol Godos_FA-EN-NL.pro")
+        # input_dir = r"D:\testHOHSamples"
+        # input_filename = os.path.join(input_dir, "test farsi.pro")
         filename = os.path.basename(input_filename)
         output_filename = os.path.join(output_dir, filename)
-        print(filename)
+        # print(filename)
         convert_song(input_filename, output_filename)
         # exit()
 

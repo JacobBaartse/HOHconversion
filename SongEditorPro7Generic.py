@@ -1,6 +1,5 @@
 import presentation_pb2
 from uuid import uuid1
-import pickle
 
 TEMPLATE = 0
 
@@ -9,28 +8,6 @@ def make_uuid():
     tmp = uuid1().urn.split("uuid:")[1]
     return tmp
 
-
-# def add_que_group(presentation_obj, cue_group_names, slide_label, slide_uuid):
-#     presentation_obj.cue_groups.add()
-#     cue_group_id = len(presentation_obj.cue_groups) - 1
-#     cue_group_names[slide_label] = cue_group_id
-#     presentation_obj.cue_groups[cue_group_id].CopyFrom(presentation_obj.cue_groups[TEMPLATE])
-#     presentation_obj.cue_groups[cue_group_id].group.uuid.string = make_uuid()
-#     presentation_obj.cue_groups[cue_group_id].group.name = slide_label
-#     presentation_obj.cue_groups[cue_group_id].group.application_group_identifier.string = make_uuid()
-#     presentation_obj.cue_groups[cue_group_id].group.application_group_name = slide_label
-#     # presentation_obj.cue_groups[cue_group_id].cue_identifiers.add()  # there is already one in the template.
-#     presentation_obj.cue_groups[cue_group_id].cue_identifiers[-1].string = slide_uuid
-#
-#
-# def add_slide(presentation_obj, cue_group_names, slide_label):
-#     slide_uuid = make_uuid()
-#     add_que_group(presentation_obj, cue_group_names, slide_label, slide_uuid)
-#     presentation_obj.cues.add()
-#     presentation_obj.cues[-1].CopyFrom(presentation_obj.cues[TEMPLATE])
-#     presentation_obj.cues[-1].uuid.string = slide_uuid
-#     presentation_obj.cues[-1].actions[0].slide.presentation.base_slide.elements[0].element.uuid.string = make_uuid()
-#     presentation_obj.cues[-1].actions[0].slide.presentation.base_slide.elements[1].element.uuid.string = make_uuid()
 
 text_block_names = {}
 
@@ -166,8 +143,8 @@ def remove_rtf_tags(rtf_data):
 
 
 color_to_name = {b'\\red255\\green255\\blue255': "SongText",
-                 b'\\red0\\green190\\blue255': "Translation",
-                 b'\\red255\\green247\\blue97': "Farsi",
+                 b'\\red0\\green190\\blue255': "Translation 1",
+                 b'\\red255\\green247\\blue97': "Translation 2",
                  b'\\red91\\green237\\blue197': "SongText"
                  }
 
@@ -176,8 +153,8 @@ def split_on_color(rtf_data, color_table):
     rtf_data = rtf_data.replace(b"}", b"")
     rtf_datas = rtf_data.split(b"\\cf")
     return_value = {"SongText": b"",
-                    "Translation": b"",
-                    "Farsi": b""}
+                    "Translation 1": b"",
+                    "Translation 2": b""}
     for rtf_data in rtf_datas:
         rtf_data = rtf_data.strip()
         if rtf_data:
@@ -201,6 +178,7 @@ def split_on_color(rtf_data, color_table):
                     print("ERROR: color not found in color_to_name", color)
                     exit(-3)
     return return_value
+
 
 rtf_data_big_font = b'{\\rtf0\\ansi\\ansicpg1252' \
                     b'{\\fonttbl\\f0\\fnil ArialMT;}' \
@@ -255,23 +233,25 @@ def convert_song(input_filename, output_filename):
                 rtf_data = rtf_data.replace(b"\\u8232 ?", b"\\par ")
                 # print(rtf_data)
                 rtf_datas = split_on_color(rtf_data, color_table)
-                print(rtf_datas)
+                # print(rtf_datas)
             if (action.slide.presentation.base_slide.elements):
                 # update current element
                 action.slide.presentation.base_slide.elements[0].element.name = "SongText"
                 action.slide.presentation.base_slide.elements[0].element.text.rtf_data = rtf_data_big_font + rtf_datas["SongText"] + b"}"
 
-                # copy element for translation
+                # copy element for translation 1
                 action.slide.presentation.base_slide.elements.add()
                 action.slide.presentation.base_slide.elements[-1].CopyFrom(action.slide.presentation.base_slide.elements[0])
-                action.slide.presentation.base_slide.elements[-1].element.name = "Translation"
-                action.slide.presentation.base_slide.elements[-1].element.text.rtf_data = rtf_data_big_font + rtf_datas["Translation"] + b"}"
+                action.slide.presentation.base_slide.elements[-1].element.uuid.string = make_uuid()
+                action.slide.presentation.base_slide.elements[-1].element.name = "Translation 1"
+                action.slide.presentation.base_slide.elements[-1].element.text.rtf_data = rtf_data_big_font + rtf_datas["Translation 1"] + b"}"
 
-                # copy element for Farsi
+                # copy element for translation 2
                 action.slide.presentation.base_slide.elements.add()
                 action.slide.presentation.base_slide.elements[-1].CopyFrom(action.slide.presentation.base_slide.elements[0])
-                action.slide.presentation.base_slide.elements[-1].element.name = "Farsi"
-                action.slide.presentation.base_slide.elements[-1].element.text.rtf_data = rtf_data_big_font + rtf_datas["Farsi"] + b" }"
+                action.slide.presentation.base_slide.elements[-1].element.uuid.string = make_uuid()
+                action.slide.presentation.base_slide.elements[-1].element.name = "Translation 2"
+                action.slide.presentation.base_slide.elements[-1].element.text.rtf_data = rtf_data_big_font + rtf_datas["Translation 2"] + b" }"
 
                 # exit(-5)
 
@@ -279,7 +259,7 @@ def convert_song(input_filename, output_filename):
     with open(output_filename, "wb") as pro_file:
         pro_file.write(presentation_obj.SerializeToString())
 
-    # todo  add \\qr   right allign to frasi
+    # todo  add \\qr   right allign to frasi ??
 
 
 if __name__ == "__main__":
