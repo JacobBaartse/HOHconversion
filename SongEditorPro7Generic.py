@@ -109,36 +109,52 @@ to_be_removed = [b"rtf", b"ansi", b"ansicpg", b'cocoartf', b'cocoaplatform', b'd
 to_be_kept = [b'cf', b'u']
 
 
-def remove_rtf_tags(rtf_data):
-    # print(rtf_data)
-    rtf_data = rtf_data.replace(b"\\\n", b"\n")
+def remove_rtf_tags(rtf_data, filename):
+    print(1, rtf_data)
+    rtf_data = rtf_data.replace(b"\\\n", b"\\par ")
     rtf_data = rtf_data.replace(b"\n", b"")
     return_data = b""
     list_rtf_data = rtf_data.split(b"\\")
     for rtf_part in list_rtf_data:
-        # print(rtf_part)
+        # if rtf_part == b"'e9":
+        #     print("debug point")
+        print(2, rtf_part)
         rtf_element_name = None
+        if len(rtf_part) == 0:
+            continue
+            print("debug print")
         if chr(rtf_part[0]) == "'":             # also keep \\'##  ## = hex value
-            return_data += b"\\" + rtf_part
-            break
+            return_data += b"\\" + rtf_part  # + b" "
+            print(30, return_data)
+            continue
         for idx in range(len(rtf_part)):
             if not rtf_element_name:
-                if chr(rtf_part[idx]) in (r" \-0123456789"):
+                if chr(rtf_part[idx]) in (r" \-0123456789'"):
                     rtf_element_name = rtf_part[:idx]
+                    print(31, return_data)
             if rtf_element_name:
-                if chr(rtf_part[idx]) not in (r"-0123456789"):
+                if chr(rtf_part[idx]) not in (r"-0123456789'"):
                     if rtf_element_name in to_be_removed:
                         return_data += rtf_part[idx:]
-                        # print(return_data)
+                        print(40, return_data)
                         break
                     elif rtf_element_name in to_be_kept:
                         return_data += b"\\" + rtf_part
+                        print(41, return_data)
+                        break
+                    elif rtf_element_name == b"par":
+                        return_data += b"\\" + rtf_part
+                        print(42, return_data)
                         break
                     else:
-                        # print([rtf_element_name])
+                        print(43, return_data)
                         exit(-1)
-        if rtf_element_name in to_be_kept:
-            return_data += b"\\" + rtf_part
+        # if rtf_element_name in to_be_kept:
+        #     return_data += b"\\" + rtf_part
+        #     print(50, return_data)
+    print(51, return_data)
+    return_data = return_data.replace(b"<put_par>", b"\\par ")
+    print(52, return_data)
     return return_data
 
 
@@ -150,6 +166,7 @@ color_to_name = {b'\\red255\\green255\\blue255': "SongText",
 
 
 def split_on_color(rtf_data, color_table):
+    prev_color_nr = 0
     rtf_data = rtf_data.replace(b"}", b"")
     rtf_datas = rtf_data.split(b"\\cf")
     return_value = {"SongText": b"",
@@ -160,9 +177,10 @@ def split_on_color(rtf_data, color_table):
         if rtf_data:
             try:
                 color_nr = int(chr(rtf_data[0]))-1
+                if color_nr == -1:
+                    color_nr = prev_color_nr
             except ValueError:
-                print(rtf_data)
-                exit(-2)
+                color_nr = prev_color_nr
             color = color_table[color_nr]
             song_line = rtf_data[1:]
             song_line = song_line.strip()
@@ -177,6 +195,11 @@ def split_on_color(rtf_data, color_table):
                 else:
                     print("ERROR: color not found in color_to_name", color)
                     exit(-3)
+        for key, value in return_value.items():
+            while b"\\par \\par" in return_value[key]:
+                return_value[key] = return_value[key].replace(b"\\par \\par", b"\\par")
+            while b"\\par\\par" in return_value[key]:
+                return_value[key] = return_value[key].replace(b"\\par\\par", b"\\par")
     return return_value
 
 
@@ -229,7 +252,7 @@ def convert_song(input_filename, output_filename):
                 rtf_data = rtf_remove_tabel(rtf_data, b"{\\*\\listoverridetable")
 
                 # print(rtf_data)
-                rtf_data = remove_rtf_tags(rtf_data)
+                rtf_data = remove_rtf_tags(rtf_data, filename=input_filename)
                 rtf_data = rtf_data.replace(b"\\u8232 ?", b"\\par ")
                 # print(rtf_data)
                 rtf_datas = split_on_color(rtf_data, color_table)
@@ -264,5 +287,5 @@ def convert_song(input_filename, output_filename):
 
 if __name__ == "__main__":
     rtf_data = b'{\\cf1\\strokewidth0 Ik ben de ware wijnstok\\par\\pard\\expndtw0\\cf1\\strokewidth0\\strokec1 Mijn Vader is de landman\\par\\pard\\li0\\fi0\\ri0\\qj\\sb0\\sa0\\sl20\\slmult0\\slleading0\\f0\\b0\\i0\\ul0\\strike0\\fs90\\expnd0\\expndtw0\\cf1\\strokewidth0\\strokec1\\nosupersub\\ulc0\\highlight2\\cb2 Jullie zijn de ranken\\par\\pard\\li0\\fi0\\ri0\\qj\\sb0\\sa0\\sl20\\slmult0\\slleading0\\f0\\b0\\i0\\ul0\\strike0\\fs90\\expnd0\\expndtw0\\cf1\\strokewidth0\\strokec1\\nosupersub\\ulc0\\highlight2\\cb2 Dus blijf in Mij\\par\\pard\\li0\\fi0\\ri0\\qj\\sb0\\sa0\\sl20\\slmult0\\slleading0\\f0\\b0\\i0\\ul0\\strike0\\fs90\\expnd0\\expndtw0\\cf1\\strokewidth0\\strokec1\\nosupersub\\ulc0\\highlight2\\cb2 Want wie in Mij wil leven\\par\\pard\\li0\\fi0\\ri0\\qj\\sb0\\sa0\\sl20\\slmult0\\slleading0\\f0\\b0\\i0\\ul0\\strike0\\fs90\\expnd0\\expndtw0\\cf1\\strokewidth0\\strokec1\\nosupersub\\ulc0\\highlight2\\cb2 Die zal Ik leven geven\\par\\pard\\li0\\fi0\\ri0\\qj\\sb0\\sa0\\sl20\\slmult0\\slleading0\\f0\\b0\\i0\\ul0\\strike0\\fs90\\expnd0\\expndtw0\\cf1\\strokewidth0\\strokec1\\nosupersub\\ulc0\\highlight2\\cb2 Blijf in Mijn liefde\\par\\pard\\li0\\fi0\\ri0\\qj\\sb0\\sa0\\sl20\\slmult0\\slleading0\\f0\\b0\\i0\\ul0\\strike0\\fs90\\expnd0\\expndtw0\\cf1\\strokewidth0\\strokec1\\nosupersub\\ulc0\\highlight2\\cb2 Blijf in Mij}'
-    test = remove_rtf_tags(rtf_data)
+    test = remove_rtf_tags(rtf_data, "test")
     print([test])
