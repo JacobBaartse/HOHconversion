@@ -106,11 +106,57 @@ to_be_removed = [b"rtf", b"ansi", b"ansicpg", b'cocoartf', b'cocoaplatform', b'd
                  b'f', b'b', b'i',  b'super', b'AppleTypeServicesF', b'AppleTypeServices'
                  ]
 
-to_be_kept = [b'cf', b'u']
+to_be_kept = [b'cf', b'u', b"'", b"par"]
+
+quoted_values = set()
+
+
+ #  '´ ä‘œ–Éãíâ°“ê—áëéó®ö…èñÓÔÄÕàÎôúÀ£î’”Ò
+
+special_character = {b'ce': b"\\u206 ",  # b"Î",  b"'",  # b"'",
+                     b'91': b"'",  # b"´",
+                     b'c4': b"\\u196 ",  # b"Ä",  b" ",  # b" ",
+                     b'f6': b"\\u246 ",  # b"ö",  b"\\u228 ",  # b"ä",
+                     b'a3': b"\\u163 ",  # b"£",  b"'",  # b"`",
+                     b'97': b"-",        # b"-",  b"\\u339 ",  # b"œ",
+                     b'c0': b"\\u192 ",  # b"À",  b"-",  # b"-",
+                     b'fa': b"\\u250 ",  # b"ú",  b"\\u201 ",  # b"É",
+                     b'b4': b"'",        # b"´",  b"\\u227 ",  # b"ã",
+                     b'ee': b"\\u238 ",  # b"î",  b"\\u237 ",  # b"í",
+                     b'd2': b"\\u210 ",  # b"Ò",  b"\\u226 ",  # b"â",
+                     b'e3': b"\\u227 ",  # b"ã",  b"\\u186 ",  # b"°",
+                     b'e4': b"\\u228 ",  # b"ä",  b'"',  # b'"',
+                     b'ea': b"\\u234 ",  # b"ê",
+                     b'9c': b"\\u339 ",  # b"œ",  b"-",  # b"-",
+                     b'e2': b"\\u226 ",  # b"â",  b"\\u225 ",  # b"á",
+                     b'e1': b"\\u225 ",  # b"á",  b"\\u235 ",  # b"ë",
+                     b'96': b"-",        # b"-",  b"\\u233 ",  # b"é",
+                     b'93': b'"',        # b'"',  b"\\u243 ",  # b"ó",
+                     b'b0': b"\\u186 ",  # b"°",  b"\\u174 ",  # b"®",
+                     b'92': b"'",        # b"´",  b"\\u246 ",  # b"ö",
+                     b'e8': b"\\u232 ",  # b"è",  b"...",  # b"...",
+                     b'ac': b"-",        # b"-",  b"\\u232 ",  # b"è",
+                     b'd4': b"\\u212 ",  # b"Ô",  b"\\u241 ",  # b"ñ",
+                     b'c9': b"\\u201 ",  # b"É",  b"\\u211 ",  # b"Ó",
+                     b'eb': b"\\u235 ",  # b"ë",  b"\\u212 ",  # b"Ô",
+                     b'a0': b" ",        # b" "   b"\\u196 ",  # b"Ä",
+                     b'f1': b"\\u241 ",  # b"ñ",  b"\\u213 ",  # b"Õ",
+                     b'd5': b"\\u213 ",  # b"Õ",  b"\\u224 ",  # b"à",
+                     b'f4': b"\\u244 ",  # b"ô",  b"\\u206 ",  # b"Î",
+                     b'e0': b"\\u224 ",  # b"à",  b"\\u244 ",  # b"ô",
+                     b'85': b"...",      # b"...",b"\\u250 ",  # b"ú",
+                     b'ed': b"\\u237 ",  # b"í",  b"\\u192 ",  # b"À",
+                     b'94': b'"',        # b'"',  b"\\u163 ",  # b"£",
+                     b'ae': b"\\u174 ",  # b"®",  b"\\u238 ",  # b"î",
+                     b'f3': b"\\u243 ",  # b"ó",  b"'",  # b"'",
+                     b'd3': b"\\u211 ",  # b"Ó",  b'"',  # b'"',
+                     b'e9': b"\\u233 ",  # b"é",   b"\\u210 ",  # b"Ò",
+                     }
+
 
 
 def remove_rtf_tags(rtf_data, filename):
-    print(1, rtf_data)
+    # print(1, rtf_data)
     rtf_data = rtf_data.replace(b"\\\n", b"\\par ")
     rtf_data = rtf_data.replace(b"\n", b"")
     return_data = b""
@@ -118,50 +164,51 @@ def remove_rtf_tags(rtf_data, filename):
     for rtf_part in list_rtf_data:
         # if rtf_part == b"'e9":
         #     print("debug point")
-        print(2, rtf_part)
+        # print(2, rtf_part)
         rtf_element_name = None
         if len(rtf_part) == 0:
+            # print("debug print")
             continue
-            print("debug print")
-        if chr(rtf_part[0]) == "'":             # also keep \\'##  ## = hex value
-            return_data += b"\\" + rtf_part  # + b" "
-            print(30, return_data)
+        if rtf_part[0:1] == b"'":
+            # return_data += b"\\" + rtf_part
+            # print(21, rtf_part)
+            return_data += special_character[rtf_part[1:3]]
+            if len(rtf_part) > 3:
+                return_data += rtf_part[3:]
             continue
         for idx in range(len(rtf_part)):
             if not rtf_element_name:
-                if chr(rtf_part[idx]) in (r" \-0123456789'"):
+                if chr(rtf_part[idx]) in (r" \-0123456789"):
                     rtf_element_name = rtf_part[:idx]
-                    print(31, return_data)
+                    # print(31, return_data)
             if rtf_element_name:
-                if chr(rtf_part[idx]) not in (r"-0123456789'"):
+                if chr(rtf_part[idx]) not in (r"-0123456789"):
                     if rtf_element_name in to_be_removed:
                         return_data += rtf_part[idx:]
-                        print(40, return_data)
+                        # print(40, return_data)
                         break
                     elif rtf_element_name in to_be_kept:
                         return_data += b"\\" + rtf_part
-                        print(41, return_data)
-                        break
-                    elif rtf_element_name == b"par":
-                        return_data += b"\\" + rtf_part
-                        print(42, return_data)
+                        # print(41, return_data)
                         break
                     else:
-                        print(43, return_data)
+                        # print(43, return_data)
                         exit(-1)
-        # if rtf_element_name in to_be_kept:
-        #     return_data += b"\\" + rtf_part
-        #     print(50, return_data)
-    print(51, return_data)
-    return_data = return_data.replace(b"<put_par>", b"\\par ")
-    print(52, return_data)
+
+    # check special characters conversion.
+    # return_data = b""
+    # for key in special_character:
+    #     return_data += key + b"-:\\'" + key + b"-" + special_character[key].replace(b"\\", b"") + b"-" + special_character[key] + b"\\par "
+    # print(return_data)
+
     return return_data
 
 
 color_to_name = {b'\\red255\\green255\\blue255': "SongText",
                  b'\\red0\\green190\\blue255': "Translation 1",
                  b'\\red255\\green247\\blue97': "Translation 2",
-                 b'\\red91\\green237\\blue197': "SongText"
+                 b'\\red91\\green237\\blue197': "SongText",
+                 b'\\red51\\green51\\blue51': "SongText",
                  }
 
 
